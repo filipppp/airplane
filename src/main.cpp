@@ -7,22 +7,15 @@
 /* Reciever configuration */
 NeoSWSerial HC12(5, 6); // HC-12 TX Pin, HC-12 RX Pin
 
-//
-//void setupSensors(){
-//    Wire.beginTransmission(0b1101000); //This is the I2C address of the MPU (b1101000/b1101001 for AC0 low/high datasheet sec. 9.2)
-//    Wire.write(0x6B); //Accessing the register 6B - Power Management (Sec. 4.28)
-//    Wire.write(0x0); //Setting SLEEP register to 0. (Required; see Note on p. 9)
-//    Wire.endTransmission();
-//    //Wire.beginTransmission(0x1110110);
-//    //Wire.write(0xF5);
-//    //Wire.write(0b000 0);
-//}
+uint8_t throttle = 0;
+uint8_t x_joy = 512;
+uint8_t y_joy = 512;
+uint8_t* payload;
 
-void clearSerial() {
-    Serial.write(27);       // ESC command
-    Serial.print("[2J");    // clear screen command
-    Serial.write(27);
-    Serial.print("[H");     // cursor to home command
+void update_controls() {
+    throttle = payload[0];
+    x_joy = payload[1];
+    y_joy = payload[2];
 }
 
 void basic_setup() {
@@ -44,9 +37,9 @@ void loop() {
     handle_servo_change();
 
     /** Incoming Throttle from Controller **/
-    int throttle;
     while (HC12.available()) {
-        throttle = HC12.read();
+        HC12.readBytes(payload, 3);
+        update_controls();
         set_throttle(throttle);
     }
 
