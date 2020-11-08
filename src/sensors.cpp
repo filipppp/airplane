@@ -30,7 +30,7 @@ VectorInt16 gy;         // [x, y, z]            gyro sensor measurements
 VectorInt16 aaReal;     // [x, y, z]            gravity-free accel sensor measurements
 VectorInt16 aaWorld;    // [x, y, z]            world-frame accel sensor measurements
 VectorFloat gravity;    // [x, y, z]            gravity vector
-float euler[3];         // [psi, theta, phi]    Euler angle container
+float* euler = new float[3];         // [psi, theta, phi]    Euler angle container
 float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 
 /** BMP280 Config & Variables **/
@@ -85,12 +85,6 @@ int setup_sensors() {
     // verify connection
     Serial.println(F("Testing device connections..."));
     Serial.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
-
-    // wait for ready
-    Serial.println(F("\nSend any character to begin DMP programming and demo: "));
-    while (Serial.available() && Serial.read()); // empty buffer
-    while (!Serial.available());                 // wait for data
-    while (Serial.available() && Serial.read()); // empty buffer again
 
     // load and configure the DMP
     Serial.println(F("Initializing DMP..."));
@@ -147,13 +141,6 @@ float* get_euler() {
         // display Euler angles in degrees
         mpu.dmpGetQuaternion(&q, fifoBuffer);
         mpu.dmpGetEuler(euler, &q);
-        Serial.print("euler\t");
-        Serial.print(euler[0] * 180 / M_PI);
-        Serial.print("\t");
-        Serial.print(euler[1] * 180 / M_PI);
-        Serial.print("\t");
-        Serial.println(euler[2] * 180 / M_PI);
-
         return euler;
     }
     return nullptr;
@@ -164,7 +151,5 @@ float get_altitude() {
 }
 
 float get_temp() {
-    sensors_event_t temp_event;
-    bmp_pressure->getEvent(&temp_event);
-    return temp_event.temperature;
+    return bmp.readTemperature();
 }
