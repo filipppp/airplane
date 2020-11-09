@@ -74,7 +74,7 @@ int setup_sensors() {
                     Adafruit_BMP280::STANDBY_MS_1); /* Standby time. */
     bmp_temp->printSensorDetails();
     set_mean_ground();
-
+//
 
 
     /** IMU **/
@@ -138,6 +138,7 @@ float* get_euler() {
     if (!dmpReady) return nullptr;
     // read a packet from FIFO
     if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) { // Get the Latest packet
+        Serial.print("reached");
         // display Euler angles in degrees
         mpu.dmpGetQuaternion(&q, fifoBuffer);
         mpu.dmpGetEuler(euler, &q);

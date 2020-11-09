@@ -11,4 +11,7 @@ enum STATE {
     REST
 };
 
+void setup_leds();
+void show_finish();
+
 #endif //AIRPLANE_HELPERS_H
