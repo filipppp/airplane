@@ -8,15 +8,21 @@
 /* Reciever configuration */
 NeoSWSerial HC12(5, 6); // HC-12 TX Pin, HC-12 RX Pin
 
+/* Aircraft Controls */
 int16_t throttle = 0;
 int16_t x_joy = 512;
 int16_t y_joy = 512;
 
+/* Payload declarations */
 const size_t PAYLOAD_SIZE = 6;
 uint8_t* payload = new uint8_t[PAYLOAD_SIZE];
+
+/* Euler variable */
 float eulers_angle[3];
 
+/* State handling */
 int HC12_state = REST;
+uint32_t lastUpdate = 0;
 
 void update_controls() {
     int temp_throttle = (int16_t) (payload[0] << 8) | payload[1];
@@ -24,12 +30,6 @@ void update_controls() {
     if (temp_throttle < 0) throttle = 0;
     x_joy = (int16_t) (payload[2] << 8) | payload[3];
     y_joy = (int16_t) (payload[4] << 8) | payload[5];
-}
-
-void print_uint8_t(uint8_t n) {
-    int i;
-    for (i = 8; i >= 0; i--)
-        Serial.print((n & (1<<i)) >> i);
 }
 
 void basic_setup() {
@@ -43,13 +43,28 @@ int update_payload() {
     while (HC12.available()) {
         in = HC12.read();
         if (in == '<') {
+            HC12_state = RECEIVING;
             HC12.readBytesUntil('>', payload, PAYLOAD_SIZE);
+            lastUpdate = millis();
+            while (HC12.available()) {
+                HC12.read();
+            }
         } else {
             return -1;
         }
     }
 
     return -1;
+}
+
+void update_states() {
+    if (millis() - lastUpdate > 2000) {
+        buzz();
+        set_finish(LOW);
+    } else {
+        stop_buzz();
+        set_finish(HIGH);
+    }
 }
 
 void setup() {
@@ -61,14 +76,16 @@ void setup() {
     /* Debug */
     HC12.begin(9600);
     Serial.println("FINISH");
-    show_finish();
+    set_finish(HIGH);
 }
 
 void loop() {
     handle_servo_change();
+    update_states();
     /** Incoming Throttle from Controller **/
     if (HC12_state == REST) {
-        HC12_state = RECEIVING;
+        set_update(HIGH);
+
         update_payload();
         update_controls();
 
@@ -77,18 +94,16 @@ void loop() {
         set_pitch(x_joy);
 
         HC12_state = REST;
+        set_update(LOW);
     }
 
     /** Altitude and Temperature Readings **/
-    Serial.println(1);
     float alt_read = get_altitude();
-    Serial.println(2);
-
     float temp = get_temp();
-    Serial.println(3);
 
+    delay(50);
     float* eulers = get_euler();
-    Serial.println(4);
+    delay(50);
 
     if (eulers) {
         for (int i = 0; i < 3; i++) {

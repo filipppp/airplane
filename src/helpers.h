@@ -12,6 +12,9 @@ enum STATE {
 };
 
 void setup_leds();
-void show_finish();
+void set_finish(int logic_level);
+void set_update(int logic_level);
+void buzz();
+void stop_buzz();
 
 #endif //AIRPLANE_HELPERS_H

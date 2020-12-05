@@ -24,7 +24,7 @@ void dmp_data_ready() {
 }
 
 // orientation/motion vars
-Quaternion q;           // [w, x, y, z]         quaternion container
+Quaternion q;           // [w, x, y, z]         quaternion container1
 VectorInt16 aa;         // [x, y, z]            accel sensor measurements
 VectorInt16 gy;         // [x, y, z]            gyro sensor measurements
 VectorInt16 aaReal;     // [x, y, z]            gravity-free accel sensor measurements
@@ -129,6 +129,7 @@ int setup_sensors() {
         Serial.print(F("DMP Initialization failed (code "));
         Serial.print(devStatus);
         Serial.println(F(")"));
+        return -1;
     }
     return 0;
 }
@@ -138,7 +139,6 @@ float* get_euler() {
     if (!dmpReady) return nullptr;
     // read a packet from FIFO
     if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) { // Get the Latest packet
-        Serial.print("reached");
         // display Euler angles in degrees
         mpu.dmpGetQuaternion(&q, fifoBuffer);
         mpu.dmpGetEuler(euler, &q);

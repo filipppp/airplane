@@ -28,32 +28,32 @@ void setup_servos() {
     right_wing.attach(PIN_RIGHT_WING_SERVO);
 }
 
-bool control_in_range(float operation) {
-    return operation < 180 && operation > 0;
+long safe_control(long operation) {
+    if (operation > 180) {
+        return 180;
+    } else if (operation < 0) {
+        return 0;
+    }
+    return operation;
 }
 
-void set_throttle(float throttle) {
+void set_throttle(long throttle) {
     motor.write(throttle);
 }
 
 void set_pitch(long displacement) {
     displacement = map(displacement, 0, 1023, 0, 10) - 5;
-    if(control_in_range(pitch + displacement)) {
-        pitch += displacement;
-    }
-    pitch += displacement;
+    pitch = safe_control(pitch + displacement);
+    Serial.print("Displacement: ");
+    Serial.print(displacement);
+    Serial.print(" | ");
     right_wing.write(pitch);
     left_wing.write(pitch);
 }
 
 void set_roll(long displacement) {
     displacement = map(displacement, 0, 1023, 0, 10) - 5;
-    if(control_in_range(roll + displacement)) {
-        roll += displacement;
-    }
-    roll += displacement;
+    roll = safe_control(roll + displacement);
     right_wing.write(roll);
     left_wing.write(roll);
 }
-
-
