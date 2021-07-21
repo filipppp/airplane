@@ -6,7 +6,7 @@
 #include "helpers.h"
 
 /* Reciever configuration */
-NeoSWSerial HC12(5, 6); // HC-12 TX Pin, HC-12 RX Pin
+NeoSWSerial HC12(5, 6); // TX Pin HC12 => RX PIN 5 | TX PIN 6 => RX PIN HC12
 
 /* Aircraft Controls */
 int16_t throttle = 0;

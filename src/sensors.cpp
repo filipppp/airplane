@@ -62,7 +62,7 @@ void set_mean_ground() {
 int setup_sensors() {
     /** Barometer & Temperature Sensor **/
     if (!bmp.begin(0x76)) {
-        Serial.println(F("Could not find a valid BMP280 sensor, check wiring!"));
+        Serial.println("Could not find a valid BMP280 sensor, check wiring!");
         /// Add warning
         return -1;
     }
@@ -72,10 +72,9 @@ int setup_sensors() {
                     Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
                     Adafruit_BMP280::FILTER_X16,      /* Filtering. */
                     Adafruit_BMP280::STANDBY_MS_1); /* Standby time. */
+
     bmp_temp->printSensorDetails();
     set_mean_ground();
-//
-
 
     /** IMU **/
     Serial.println(F("Initializing I2C devices..."));
