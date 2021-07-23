@@ -4,9 +4,7 @@
 #include "sensors.h"
 #include "servos.h"
 #include "helpers.h"
-
-/* Reciever configuration */
-NeoSWSerial HC12(5, 6); // TX Pin HC12 => RX PIN 5 | TX PIN 6 => RX PIN HC12
+#define HC12 Serial
 
 /* Aircraft Controls */
 int16_t throttle = 0;
@@ -48,7 +46,6 @@ void update_controls() {
 }
 
 void basic_setup() {
-    Serial.begin(9600);
     Wire.begin();
     Wire.setClock(400000);
 }
@@ -76,6 +73,25 @@ void handle_control_input(uint8_t input) {
     }
 }
 
+int update_payload() {
+    char in;
+    while (HC12.available()) {
+        in = HC12.read();
+        if (in == '<') {
+            HC12_state = RECEIVING;
+            HC12.readBytesUntil('>', control_payload, CONTROL_PAYLOAD_SIZE);
+            lastUpdate = millis();
+            while (HC12.available()) {
+                HC12.read();
+            }
+        } else {
+            return -1;
+        }
+    }
+
+    return -1;
+}
+
 void update_sensor_data() {
     /** Altitude and Temperature Readings **/
     altitude = get_altitude();
@@ -92,7 +108,6 @@ void update_sensor_data() {
 }
 
 void send_sensor_payload() {
-        Serial.println("SEND");
         sensor_payload.sensor_data[0] = altitude;
         sensor_payload.sensor_data[1] = temp;
         for (int i = 0; i < 3; i++) {
@@ -120,14 +135,13 @@ void update_power_led() {
 
 /* SETUP METHOD */
 void setup() {
+    HC12.begin(9600);
     basic_setup();
     setup_sensors();
     setup_servos();
     setup_leds();
 
     /* Debug */
-    HC12.attachInterrupt(handle_control_input);
-    HC12.begin(9600);
     Serial.println("FINISH");
     set_power_led(HIGH);
 }
@@ -136,24 +150,34 @@ void loop() {
     handle_servo_change();
     update_power_led();
 
+    /** Incoming Throttle from Controller **/
+    if (HC12_state == REST) {
+        set_update_led(HIGH);
+
+        update_payload();
+        update_controls();
+
+        HC12_state = REST;
+        set_update_led(LOW);
+    }
+
     /** update sensor payload before sending back to controller **/
     send_sensor_payload();
-
     update_sensor_data();
 
-    Serial.print(throttle);
-    Serial.print(";");
-    Serial.print(x_joy);
-    Serial.print(";");
-    Serial.print(y_joy);
-    Serial.print(";");
-    Serial.print(altitude);
-    Serial.print(";");
-    Serial.print(temp);
-    Serial.print(";");
-    Serial.print(eulers_angle[0]);
-    Serial.print(";");
-    Serial.print(eulers_angle[1]);
-    Serial.print(";");
-    Serial.println(eulers_angle[2]); // z
+//    Serial.print(throttle);
+//    Serial.print(";");
+//    Serial.print(x_joy);
+//    Serial.print(";");
+//    Serial.print(y_joy);
+//    Serial.print(";");
+//    Serial.print(altitude);
+//    Serial.print(";");
+//    Serial.print(temp);
+//    Serial.print(";");
+//    Serial.print(eulers_angle[0]);
+//    Serial.print(";");
+//    Serial.print(eulers_angle[1]);
+//    Serial.print(";");
+//    Serial.println(eulers_angle[2]); // z
 }
