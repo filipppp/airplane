@@ -14,22 +14,37 @@ int16_t x_joy = 512;
 int16_t y_joy = 512;
 
 /* Payload declarations */
-const size_t PAYLOAD_SIZE = 6;
-uint8_t* payload = new uint8_t[PAYLOAD_SIZE];
+const size_t CONTROL_PAYLOAD_SIZE = 6;
+uint8_t* control_payload = new uint8_t[CONTROL_PAYLOAD_SIZE];
+
+/* 5 floats with each 4 bytes */
+const size_t SENSOR_PAYLOAD_SIZE = 5 * 4;
+union SENSORS {
+    float sensor_data[5];
+    uint8_t final_payload[SENSOR_PAYLOAD_SIZE];
+} sensor_payload;
 
 /* Euler variable */
 float eulers_angle[3];
+float temp = 0;
+float altitude = 0;
+
 
 /* State handling */
 int HC12_state = REST;
 uint32_t lastUpdate = 0;
+uint32_t last_sensor_broadcast = 0;
 
 void update_controls() {
-    int temp_throttle = (int16_t) (payload[0] << 8) | payload[1];
+    int temp_throttle = (int16_t) (control_payload[0] << 8) | control_payload[1];
     if (temp_throttle < 180) throttle = temp_throttle;
     if (temp_throttle < 0) throttle = 0;
-    x_joy = (int16_t) (payload[2] << 8) | payload[3];
-    y_joy = (int16_t) (payload[4] << 8) | payload[5];
+    x_joy = (int16_t) (control_payload[2] << 8) | control_payload[3];
+    y_joy = (int16_t) (control_payload[4] << 8) | control_payload[5];
+
+    /** Set new gotten controls **/
+    set_throttle(throttle);
+    set_pitch(x_joy);
 }
 
 void basic_setup() {
@@ -38,35 +53,72 @@ void basic_setup() {
     Wire.setClock(400000);
 }
 
-int update_payload() {
-    char in;
-    while (HC12.available()) {
-        in = HC12.read();
-        if (in == '<') {
-            HC12_state = RECEIVING;
-            HC12.readBytesUntil('>', payload, PAYLOAD_SIZE);
-            lastUpdate = millis();
-            while (HC12.available()) {
-                HC12.read();
-            }
-        } else {
-            return -1;
+bool read = false;
+int byte_counter = 0;
+void handle_control_input(uint8_t input) {
+    if (input == '<') {
+        set_update_led(HIGH);
+
+        read = true;
+    } else if (input == '>') {
+        set_update_led(LOW);
+        lastUpdate = millis();
+
+        update_controls();
+        byte_counter = 0;
+        read = false;
+    } else if (read) {
+        control_payload[byte_counter++] = input;
+        if (byte_counter >= CONTROL_PAYLOAD_SIZE) {
+            read = false;
+            byte_counter = 0;
         }
     }
-
-    return -1;
 }
 
-void update_states() {
-    if (millis() - lastUpdate > 2000) {
-        buzz();
-        set_finish(LOW);
-    } else {
-        stop_buzz();
-        set_finish(HIGH);
+void update_sensor_data() {
+    /** Altitude and Temperature Readings **/
+    altitude = get_altitude();
+    temp = get_temp();
+
+    delay(50);
+    float* eulers = get_euler();
+    delay(50);
+    if (eulers) {
+        for (int i = 0; i < 3; i++) {
+            eulers_angle[i] = eulers[i] * 180 / M_PI;
+        }
     }
 }
 
+void send_sensor_payload() {
+        Serial.println("SEND");
+        sensor_payload.sensor_data[0] = altitude;
+        sensor_payload.sensor_data[1] = temp;
+        for (int i = 0; i < 3; i++) {
+            sensor_payload.sensor_data[i + 2] = eulers_angle[i];
+        }
+
+        HC12.print('<');
+        HC12.write(sensor_payload.final_payload, 20);
+        HC12.print('>');
+        last_sensor_broadcast = millis();
+}
+
+/* Updates Green Power Led => If no message has been received since more than two seconds,
+ * the power led is set to LOW */
+void update_power_led() {
+    if (millis() - lastUpdate > 2000) {
+        buzz();
+        set_power_led(LOW);
+    } else {
+        stop_buzz();
+        set_power_led(HIGH);
+    }
+}
+
+
+/* SETUP METHOD */
 void setup() {
     basic_setup();
     setup_sensors();
@@ -74,42 +126,20 @@ void setup() {
     setup_leds();
 
     /* Debug */
+    HC12.attachInterrupt(handle_control_input);
     HC12.begin(9600);
     Serial.println("FINISH");
-    set_finish(HIGH);
+    set_power_led(HIGH);
 }
 
 void loop() {
     handle_servo_change();
-    update_states();
-    /** Incoming Throttle from Controller **/
-    if (HC12_state == REST) {
-        set_update(HIGH);
+    update_power_led();
 
-        update_payload();
-        update_controls();
+    /** update sensor payload before sending back to controller **/
+    send_sensor_payload();
 
-        /** Set new gotten controls **/
-        set_throttle(throttle);
-        set_pitch(x_joy);
-
-        HC12_state = REST;
-        set_update(LOW);
-    }
-
-    /** Altitude and Temperature Readings **/
-    float alt_read = get_altitude();
-    float temp = get_temp();
-
-    delay(50);
-    float* eulers = get_euler();
-    delay(50);
-
-    if (eulers) {
-        for (int i = 0; i < 3; i++) {
-            eulers_angle[i] = eulers[i] * 180 / M_PI;
-        }
-    }
+    update_sensor_data();
 
     Serial.print(throttle);
     Serial.print(";");
@@ -117,7 +147,7 @@ void loop() {
     Serial.print(";");
     Serial.print(y_joy);
     Serial.print(";");
-    Serial.print(alt_read);
+    Serial.print(altitude);
     Serial.print(";");
     Serial.print(temp);
     Serial.print(";");

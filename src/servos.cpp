@@ -44,9 +44,6 @@ void set_throttle(long throttle) {
 void set_pitch(long displacement) {
     displacement = map(displacement, 0, 1023, 0, 10) - 5;
     pitch = safe_control(pitch + displacement);
-    Serial.print("Displacement: ");
-    Serial.print(displacement);
-    Serial.print(" | ");
     right_wing.write(pitch);
     left_wing.write(pitch);
 }
