@@ -50,29 +50,6 @@ void basic_setup() {
     Wire.setClock(400000);
 }
 
-bool read = false;
-int byte_counter = 0;
-void handle_control_input(uint8_t input) {
-    if (input == '<') {
-        set_update_led(HIGH);
-
-        read = true;
-    } else if (input == '>') {
-        set_update_led(LOW);
-        lastUpdate = millis();
-
-        update_controls();
-        byte_counter = 0;
-        read = false;
-    } else if (read) {
-        control_payload[byte_counter++] = input;
-        if (byte_counter >= CONTROL_PAYLOAD_SIZE) {
-            read = false;
-            byte_counter = 0;
-        }
-    }
-}
-
 int update_payload() {
     char in;
     while (HC12.available()) {
