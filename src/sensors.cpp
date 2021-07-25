@@ -22,15 +22,14 @@ volatile bool mpuInterrupt = false;     // indicates whether MPU interrupt pin h
 void dmp_data_ready() {
     mpuInterrupt = true;
 }
-
+Quaternion q;
+float* euler = new float[3];
 // orientation/motion vars
-Quaternion q;           // [w, x, y, z]         quaternion container1
 VectorInt16 aa;         // [x, y, z]            accel sensor measurements
 VectorInt16 gy;         // [x, y, z]            gyro sensor measurements
 VectorInt16 aaReal;     // [x, y, z]            gravity-free accel sensor measurements
 VectorInt16 aaWorld;    // [x, y, z]            world-frame accel sensor measurements
 VectorFloat gravity;    // [x, y, z]            gravity vector
-float* euler = new float[3];         // [psi, theta, phi]    Euler angle container
 float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 
 /** BMP280 Config & Variables **/
@@ -133,7 +132,7 @@ int setup_sensors() {
     return 0;
 }
 
-float* get_euler() {
+float* get_euler(float* q_arr) {
     // if programming failed, don't try to do anything
     if (!dmpReady) return nullptr;
     // read a packet from FIFO
@@ -141,6 +140,12 @@ float* get_euler() {
         // display Euler angles in degrees
         mpu.dmpGetQuaternion(&q, fifoBuffer);
         mpu.dmpGetEuler(euler, &q);
+        for (int i = 0; i < 4; ++i) {
+            q_arr[0] = q.w;
+            q_arr[1] = q.x;
+            q_arr[2] = q.y;
+            q_arr[3] = q.z;
+        }
         return euler;
     }
     return nullptr;

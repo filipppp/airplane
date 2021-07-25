@@ -30,3 +30,15 @@ void buzz() {
 void stop_buzz() {
     noTone(BUZZER_PIN);
 }
+
+/* Updates Green Power Led => If no message has been received since more than two seconds,
+ * the power led is set to LOW */
+void update_power_led(uint32_t last_update) {
+    if (millis() - last_update > 2000) {
+        buzz();
+        set_power_led(LOW);
+    } else {
+        stop_buzz();
+        set_power_led(HIGH);
+    }
+}
