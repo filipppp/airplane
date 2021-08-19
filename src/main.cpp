@@ -1,4 +1,3 @@
-#include <NeoSWSerial.h>
 #include <Adafruit_BMP280.h>
 #include "sensors.h"
 #include "servos.h"
@@ -30,7 +29,8 @@ void update_sensor_data() {
     /** Altitude and Temperature Readings **/
     sensors.altitude = get_altitude();
     sensors.temperature = get_temp();
-    float* euler = get_euler(sensors.q);
+    read_mpu();
+    float* euler = refresh_angles(sensors.q);
     if (euler) {
         sensors.x_angle = euler[0] * 180 / M_PI;
         sensors.y_angle = euler[1] * 180 / M_PI;
