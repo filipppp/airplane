@@ -1,10 +1,15 @@
-#include <Adafruit_BMP280.h>
+#include <Wire.h>
+#include "../.pio/libdeps/megaatmega2560/TinyGPSPlus/src/TinyGPS++.h"
+
+TinyGPSPlus gps;
+float lattitude,longitude;
+
 #include "sensors.h"
 #include "servos.h"
 #include "helpers.h"
-#include "../.pio/libdeps/uno/PacketSerial/src/PacketSerial.h"
+#include "../.pio/libdeps/megaatmega2560//PacketSerial/src/PacketSerial.h"
 
-PacketSerial HC12;
+PacketSerial_<COBS, 0, 512> HC12;
 
 /* Sensor variable */
 struct CONTROLS {
@@ -16,9 +21,6 @@ struct CONTROLS {
 struct SENSORS {
     float temperature = 0;
     float altitude = 0;
-    float x_angle = 0;
-    float y_angle = 0;
-    float z_angle = 0;
     float q[4] = {0,0,0,0};
 } sensors;
 
@@ -29,13 +31,7 @@ void update_sensor_data() {
     /** Altitude and Temperature Readings **/
     sensors.altitude = get_altitude();
     sensors.temperature = get_temp();
-    read_mpu();
-    float* euler = refresh_angles(sensors.q);
-    if (euler) {
-        sensors.x_angle = euler[0] * 180 / M_PI;
-        sensors.y_angle = euler[1] * 180 / M_PI;
-        sensors.z_angle = euler[2] * 180 / M_PI;
-    }
+    refresh_angles(sensors.q);
 }
 
 void onPacketReceived(const uint8_t* buffer, size_t size) {
@@ -53,17 +49,24 @@ void onPacketReceived(const uint8_t* buffer, size_t size) {
         HC12.send((uint8_t *)&sensors, sizeof(sensors));
 
         set_update_led(LOW);
-    } else {
-        buzz();
-        delay(1000);
-        stop_buzz();
     }
+//    else {
+//        buzz();
+//        delay(1000);
+//        stop_buzz();
+//    }
 }
 
 /* SETUP METHOD */
 void setup() {
-    HC12.begin(9600);
+    // Terminal
+    Serial.begin(9600);
+    // HC-12
+    Serial1.begin(9600);
+    HC12.setStream(&Serial1);
     HC12.setPacketHandler(&onPacketReceived);
+    // GPS
+    Serial2.begin(9600);
     Wire.begin();
     Wire.setClock(400000);
 
@@ -80,6 +83,20 @@ void loop() {
     handle_servo_change();
     update_power_led(last_control_update);
     update_sensor_data();
+
+    while (Serial2.available())
+    {
+        int data = Serial2.read();
+        if (gps.encode(data))
+        {
+            lattitude = (gps.location.lat());
+            longitude = (gps.location.lng());
+            Serial.print ("lattitude: ");
+            Serial.println (lattitude);
+            Serial.print ("longitude: ");
+            Serial.println (longitude);
+        }
+    }
 
     /** Incoming Throttle from Controller **/
     HC12.update();

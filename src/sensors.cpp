@@ -1,17 +1,12 @@
 #include <Adafruit_BMP280.h>
+#include <Simple_MPU6050.h>
 #include "sensors.h"
-#include "../.pio/libdeps/uno/Simple_MPU6050/Simple_MPU6050.h"
 
-/** MPU6050 Config & Variables **/
-#define MPU6050_ADDRESS_AD0_LOW     0x68 // address pin low (GND), default for InvenSense evaluation board
-#define MPU6050_ADDRESS_AD0_HIGH    0x69 // address pin high (VCC)
-
-#define MPU6050_DEFAULT_ADDRESS     MPU6050_ADDRESS_AD0_LOW
+#define MPU6050_DEFAULT_ADDRESS 0x68
 Simple_MPU6050 mpu;
 ENABLE_MPU_OVERFLOW_PROTECTION();
 
 Quaternion q;
-float* euler = new float[3];
 
 /** BMP280 Config & Variables **/
 
@@ -40,7 +35,6 @@ void set_mean_ground() {
 
 void refresh_data(int16_t *gyro, int16_t *accel, int32_t *quat, uint32_t *timestamp) {
     mpu.GetQuaternion(&q, quat);
-    mpu.GetEuler(euler, &q);
 }
 
 int setup_sensors() {
@@ -71,18 +65,14 @@ int setup_sensors() {
     return 0;
 }
 
-float* refresh_angles(float* q_arr) {
+void refresh_angles(float* q_arr) {
+    mpu.dmp_read_fifo();
     for (int i = 0; i < 4; ++i) {
         q_arr[0] = q.w;
         q_arr[1] = q.x;
         q_arr[2] = q.y;
         q_arr[3] = q.z;
     }
-    return euler;
-}
-
-void read_mpu() {
-    mpu.dmp_read_fifo();
 }
 
 float get_altitude() {
