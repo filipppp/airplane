@@ -3,16 +3,24 @@
 //
 
 #include <HID.h>
+#include <avr/wdt.h>
 #include "helpers.h"
+#include "sensors.h"
 
-const int BUZZER_PIN = 3;
-const int POWER_PIN = 4; // GREEN
-const int UPDATE_PIN = 8; // YELLOW
+const uint8_t BUZZER_PIN = 3;
+const uint8_t POWER_PIN = 5; // GREEN
+const uint8_t UPDATE_PIN = 4; // YELLOW
+const uint8_t CALIBRATE_PIN = 28;
+const uint8_t SET_PIN = 12;
 
-void setup_leds() {
+
+void setup_pin_modes() {
     pinMode(POWER_PIN, OUTPUT);
     pinMode(BUZZER_PIN, OUTPUT);
     pinMode(UPDATE_PIN, OUTPUT);
+    pinMode(SET_PIN, OUTPUT);
+    digitalWrite(SET_PIN, HIGH);
+    pinMode(CALIBRATE_PIN, INPUT_PULLUP);
 }
 
 void set_power_led(int logic_level) {
@@ -24,7 +32,7 @@ void set_update_led(int logic_level) {
 }
 
 void buzz() {
-    tone(BUZZER_PIN, 500);
+//    tone(BUZZER_PIN, 500);
 }
 
 void stop_buzz() {
@@ -40,5 +48,13 @@ void update_power_led(uint32_t last_update) {
     } else {
         stop_buzz();
         set_power_led(HIGH);
+    }
+}
+
+void check_calibration(bool force) {
+    if (digitalRead(CALIBRATE_PIN) == LOW || force) {
+//        wdt_disable();
+        setup_sensors(true);
+//        wdt_enable(WDTO_60MS);
     }
 }
