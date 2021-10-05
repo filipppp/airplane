@@ -1,16 +1,10 @@
 #include <Wire.h>
 #include <EEPROM.h>
 #include <avr/wdt.h>
-//#include "../.pio/libdeps/megaatmega2560/TinyGPSPlus/src/TinyGPS++.h"
-//TinyGPSPlus gps;
-//float lattitude,longitude;
-
 #include "sensors.h"
 #include "servos.h"
 #include "helpers.h"
 #include "../.pio/libdeps/megaatmega2560/PacketSerial/src/PacketSerial.h"
-
-PacketSerial_<COBS, 0, 512> HC12;
 
 /* Sensor variable */
 struct CONTROLS {
