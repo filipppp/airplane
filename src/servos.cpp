@@ -12,15 +12,6 @@ const int PIN_RIGHT_WING_SERVO = 11;
 
 float pitch, yaw, roll = 0;
 
-/* Responsible for pot change */
-void handle_servo_change() {
-    /*
-    int pot_val = analogRead(PIN_AN_SERVO_POT);
-    int val = map(pot_val, 0, 1023, 0, 180);
-    left_wing.write(val);
-    right_wing.write(val);
-     */
-}
 
 void setup_servos() {
     motor.attach(PIN_MOTOR, 1000, 2000);
@@ -42,8 +33,11 @@ void set_throttle(long throttle) {
 }
 
 void set_pitch(long displacement) {
-    displacement = map(displacement, 0, 1023, 0, 10) - 5;
-    pitch = safe_control(pitch + displacement);
+    float disp = (float) displacement;
+    long d = round( disp / 127 * 5);
+    pitch += d;
+    pitch = pitch > 180 ? 180 : pitch;
+    pitch = pitch < 0 ? 0 : pitch;
     right_wing.write(pitch);
     left_wing.write(pitch);
 }

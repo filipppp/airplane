@@ -1,11 +1,12 @@
 #include <Wire.h>
 #include <EEPROM.h>
 #include <avr/wdt.h>
+#include <Simple_MPU6050.h>
 #include "sensors.h"
 #include "servos.h"
 #include "helpers.h"
 #include "../.pio/libdeps/megaatmega2560/PacketSerial/src/PacketSerial.h"
-
+extern Simple_MPU6050 mpu;
 /* Sensor variable */
 struct CONTROLS {
     int8_t pitch = 0;
@@ -26,9 +27,9 @@ uint32_t last_control_update = 0;
 
 void update_sensor_data() {
     /** Altitude and Temperature Readings **/
-    sensors.altitude = get_altitude();
-    sensors.temperature = get_temp();
-    refresh_angles(sensors.q);
+    mpu.dmp_read_fifo();
+//    sensors.altitude = get_altitude();
+//    sensors.temperature = get_temp();
     sensors.voltage = read_battery_voltage();
 }
 
@@ -45,6 +46,7 @@ void setup() {
     Wire.setWireTimeout(3000, true);
 
     /** Setup sensors etc. **/
+    set_q(sensors.q);
     setup_sensors();
     setup_servos();
     setup_pin_modes();
@@ -56,9 +58,15 @@ void setup() {
 //    wdt_enable(WDTO_500MS);
 }
 
+void update_airplane() {
+    set_throttle(controls.throttle / 100 * 180);
+    set_pitch(controls.pitch);
+}
+
 void handle_radio() {
     CONTROLS temp_controls;
     if (Serial1.available() < sizeof(controls)) return;
+
     size_t read = Serial1.readBytes((uint8_t*) &temp_controls, sizeof(controls));
     if (read == sizeof(controls)) {
         last_control_update = millis();
@@ -68,6 +76,7 @@ void handle_radio() {
         controls.pitch = temp_controls.pitch;
         controls.roll = temp_controls.roll;
         controls.buttons = temp_controls.buttons;
+        update_airplane();
         if ((controls.buttons & 2) == 2) {
             check_calibration(true);
         } else {
@@ -79,21 +88,19 @@ void handle_radio() {
 
 
 void loop() {
-    handle_servo_change();
     update_power_led(last_control_update);
     update_sensor_data();
     check_calibration();
     handle_radio();
 
-//    Serial.print(sensors.temperature);
-//    Serial.print(";");
-//    Serial.print(sensors.altitude);
-//    for (int i = 0; i < 4; ++i) {
-//        Serial.print(";");
-//        Serial.print(sensors.q[i]);
-//    }
-//    Serial.print(';');
-//    Serial.println(millis() - time);
+    Serial.print(sensors.temperature);
+    Serial.print(";");
+    Serial.print(sensors.altitude);
+    for (int i = 0; i < 4; ++i) {
+        Serial.print(";");
+        Serial.print(sensors.q[i]);
+    }
+    Serial.println();
 //    wdt_reset();
 //    Serial.println(millis() - time);
 }

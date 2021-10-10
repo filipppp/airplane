@@ -17,6 +17,7 @@ const long ANALOG_READING_MIN = round(ARD_MIN_VOLTAGE / 0.0048828125);
 #define MPU6050_DEFAULT_ADDRESS 0x68
 Simple_MPU6050 mpu;
 Quaternion q;
+float *q_sensor;
 
 /** BMP280 Config & Variables **/
 const int SAMPLE_SIZE_MEAN_PRESSURE = 50;
@@ -41,7 +42,17 @@ void set_mean_ground() {
 
 void refresh_data(int16_t *gyro, int16_t *accel, int32_t *quat, uint32_t *timestamp) {
     mpu.GetQuaternion(&q, quat);
-    Serial.println("test");
+    q_sensor[0] = q.w;
+    q_sensor[1] = q.x;
+    q_sensor[2] = q.y;
+    q_sensor[3] = q.z;
+
+    // added a spam timer to keep the serial port alive.
+    static unsigned long SpamTimer;
+    if ((millis() - SpamTimer) >= (100)) { // only 10Hz insted of 100Hz
+        SpamTimer= millis();
+        Serial.println("test");
+    }
 //    mpu.GetYawPitchRoll(test, &q);
 //    Serial.print(test[0] * 180 / PI);
 //    Serial.print(';');
@@ -50,17 +61,21 @@ void refresh_data(int16_t *gyro, int16_t *accel, int32_t *quat, uint32_t *timest
 //    Serial.println(test[2] * 180 / PI);
 }
 
+void set_q(float *q_arr) {
+    q_sensor = q_arr;
+}
+
 int setup_sensors(bool save) {
     pinMode(VOLTAGE_PIN, INPUT);
 
     /** Barometer & Temperature Sensor **/
-    while (!bmp.begin(0x76)) {}
-    /* Default settings from datasheet. */
-    bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
-                    Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
-                    Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
-                    Adafruit_BMP280::FILTER_X16,      /* Filtering. */
-                    Adafruit_BMP280::STANDBY_MS_1); /* Standby time. */
+//    while (!bmp.begin(0x76)) {}
+//    /* Default settings from datasheet. */
+//    bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
+//                    Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
+//                    Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
+//                    Adafruit_BMP280::FILTER_X16,      /* Filtering. */
+//                    Adafruit_BMP280::STANDBY_MS_1); /* Standby time. */
     if (save) {
         set_mean_ground();
         EEPROM.put(8, mean_ground_pa);
@@ -69,7 +84,7 @@ int setup_sensors(bool save) {
     }
 
     /* MPU6050 */
-    mpu.Set_DMP_Output_Rate(DMP_100Hz);
+    mpu.Set_DMP_Output_Rate(DMP_10Hz);
     if (save) {
         mpu.SetAddress(MPU6050_DEFAULT_ADDRESS).CalibrateMPU().load_DMP_Image();// Does it all for you with Calibration
         int16_t offsets[6];
@@ -84,16 +99,6 @@ int setup_sensors(bool save) {
     }
     mpu.on_FIFO(refresh_data);
     return 0;
-}
-
-void refresh_angles(float *q_arr) {
-    mpu.dmp_read_fifo(true);
-    for (int i = 0; i < 4; ++i) {
-        q_arr[0] = q.w;
-        q_arr[1] = q.x;
-        q_arr[2] = q.y;
-        q_arr[3] = q.z;
-    }
 }
 
 float get_altitude() {
