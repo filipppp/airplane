@@ -52,13 +52,14 @@ void refresh_data(int16_t *gyro, int16_t *accel, int32_t *quat, uint32_t *timest
     if ((millis() - SpamTimer) >= (100)) { // only 10Hz insted of 100Hz
         SpamTimer= millis();
         Serial.println("test");
-    }
+    
 //    mpu.GetYawPitchRoll(test, &q);
 //    Serial.print(test[0] * 180 / PI);
 //    Serial.print(';');
 //    Serial.print(test[1] * 180 / PI);
 //    Serial.print(';');
 //    Serial.println(test[2] * 180 / PI);
+    }
 }
 
 void set_q(float *q_arr) {
@@ -84,7 +85,9 @@ int setup_sensors(bool save) {
     }
 
     /* MPU6050 */
-    mpu.Set_DMP_Output_Rate(DMP_10Hz);
+   // mpu.Set_DMP_Output_Rate(DMP_10Hz);
+    mpu.Set_DMP_Output_Rate_Hz(10);           // Set the DMP output rate from 200Hz to 5 Minutes.
+
     if (save) {
         mpu.SetAddress(MPU6050_DEFAULT_ADDRESS).CalibrateMPU().load_DMP_Image();// Does it all for you with Calibration
         int16_t offsets[6];
