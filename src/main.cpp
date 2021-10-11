@@ -92,15 +92,18 @@ void loop() {
     update_sensor_data();
     check_calibration();
     handle_radio();
-
-    Serial.print(sensors.temperature);
-    Serial.print(";");
-    Serial.print(sensors.altitude);
-    for (int i = 0; i < 4; ++i) {
+    static unsigned long SpamTimer; // serial port cant empty fast enough to keep up causing crashes.
+    if ((millis() - SpamTimer) >= (100)) { // only 10Hz insted of ?Hz
+        SpamTimer= millis();
+        Serial.print(sensors.temperature);
         Serial.print(";");
-        Serial.print(sensors.q[i]);
+        Serial.print(sensors.altitude);
+        for (int i = 0; i < 4; ++i) {
+            Serial.print(";");
+            Serial.print(sensors.q[i]);
+        }
+        Serial.println();
     }
-    Serial.println();
 //    wdt_reset();
 //    Serial.println(millis() - time);
 }
